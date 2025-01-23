@@ -44,7 +44,7 @@ def split_nodes_link(old_nodes):
     new_nodes = []
     
     for old_node in old_nodes:
-        if old_node.text_type != TextType.NORMAL:
+        if old_node.text_type not in [TextType.NORMAL, TextType.ITALIC, TextType.BOLD]:
             new_nodes.append(old_node)
             continue
             
@@ -54,25 +54,32 @@ def split_nodes_link(old_nodes):
             continue
             
         current_text = old_node.text
+        parent_type = old_node.text_type  # Store the parent's text type
+        
         for anchor_text, url in links:
             link_markdown = f"[{anchor_text}]({url})"
             sections = current_text.split(link_markdown, 1)
             
             if sections[0]:
-                new_nodes.append(TextNode(sections[0], TextType.NORMAL))
+                new_nodes.append(TextNode(sections[0], parent_type))  # Use parent's type
             new_nodes.append(TextNode(anchor_text, TextType.LINK, url))
             current_text = sections[1] if len(sections) > 1 else ""
             
         if current_text:
-            new_nodes.append(TextNode(current_text, TextType.NORMAL))
+            new_nodes.append(TextNode(current_text, parent_type))  # Use parent's type
             
     return new_nodes
 
 def text_to_textnodes(text):
     nodes = [TextNode(text, TextType.NORMAL)]
+    
+    # Process text styling first
+    nodes = split_nodes_delimiter(nodes, "**", TextType.BOLD, strict=False)
+    nodes = split_nodes_delimiter(nodes, "*", TextType.ITALIC, strict=False)
+    nodes = split_nodes_delimiter(nodes, "`", TextType.CODE, strict=False)
+    
+    # Process links and images last
     nodes = split_nodes_image(nodes)
     nodes = split_nodes_link(nodes)
-    nodes = split_nodes_delimiter(nodes, "**", TextType.BOLD)
-    nodes = split_nodes_delimiter(nodes, "*", TextType.ITALIC)
-    nodes = split_nodes_delimiter(nodes, "`", TextType.CODE)
-    return nodes 
+    
+    return nodes

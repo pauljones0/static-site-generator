@@ -1,48 +1,51 @@
+import re
+import logging
 from textnode import TextNode, TextType
 
-def split_nodes_delimiter(old_nodes, delimiter, text_type):
-    new_nodes = []
-    text_to_process = ""
-    normal_node_indices = []
-    
-    # Collect all NORMAL text and track which nodes they came from
-    for i, node in enumerate(old_nodes):
-        if node.text_type == TextType.NORMAL:
-            text_to_process += node.text
-            normal_node_indices.extend([i] * len(node.text))
-    
-    # If no delimiters found, return original nodes
-    if delimiter not in text_to_process:
-        return old_nodes
+logging.basicConfig(level=logging.DEBUG)
+
+def split_nodes_delimiter(old_nodes, delimiter, text_type, strict=True):
+    """
+    Splits text nodes based on the specified delimiter and assigns the appropriate text type.
+
+    Args:
+        old_nodes (list of TextNode): The original list of text nodes.
+        delimiter (str): The markdown delimiter to split by (e.g., '*', '**', '`').
+        text_type (TextType): The type to assign to the split text (e.g., TextType.BOLD).
+        strict (bool): If True, raise ValueError for malformed markdown. If False, handle gracefully.
+
+    Returns:
+        list of TextNode: The new list of text nodes after splitting.
+    """
+    if not delimiter:
+        raise ValueError("Delimiter cannot be empty")
         
-    # Check for balanced delimiters in combined text
-    parts = text_to_process.split(delimiter)
-    if len(parts) % 2 == 0:
-        raise ValueError(f"Invalid Markdown syntax: Unmatched delimiter {delimiter}")
+    logging.debug(f"Splitting nodes with delimiter: '{delimiter}' and text type: {text_type}")
+    new_nodes = []
     
-    # Process the parts and rebuild nodes
-    current_pos = 0
-    in_delimiter = False
-    result = []
-    
-    for i, old_node in enumerate(old_nodes):
-        if old_node.text_type != TextType.NORMAL:
-            new_nodes.append(old_node)
+    for node in old_nodes:
+        if node.text_type != TextType.NORMAL:
+            new_nodes.append(node)
             continue
             
-        node_text = ""
-        while current_pos < len(text_to_process) and normal_node_indices[current_pos] == i:
-            if text_to_process.startswith(delimiter, current_pos):
-                if node_text:
-                    new_nodes.append(TextNode(node_text, TextType.NORMAL if not in_delimiter else text_type))
-                node_text = ""
-                current_pos += len(delimiter)
-                in_delimiter = not in_delimiter
+        # Count delimiters to ensure they're balanced
+        if delimiter not in node.text or node.text.count(delimiter) % 2 != 0:
+            if strict:
+                raise ValueError(f"Invalid Markdown syntax: Unmatched delimiter {delimiter}")
+            new_nodes.append(node)
+            continue
+            
+        parts = re.split(f'({re.escape(delimiter)})', node.text)
+        current_type = TextType.NORMAL
+        
+        for i, part in enumerate(parts):
+            if part == delimiter:
+                current_type = text_type if current_type == TextType.NORMAL else TextType.NORMAL
+                continue
+            # Special handling for empty content between delimiters
+            if current_type == text_type and part.strip() == "":
+                new_nodes.append(TextNode("", current_type))
             else:
-                node_text += text_to_process[current_pos]
-                current_pos += 1
+                new_nodes.append(TextNode(part, current_type))
                 
-        if node_text:
-            new_nodes.append(TextNode(node_text, TextType.NORMAL if not in_delimiter else text_type))
-    
     return new_nodes 

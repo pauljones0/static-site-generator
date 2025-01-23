@@ -3,6 +3,13 @@ from inline_markdown import text_to_textnodes
 from textnode import text_node_to_html_node
 import re
 
+def extract_title(markdown):
+    lines = markdown.split('\n')
+    for line in lines:
+        if line.strip().startswith('# '):
+            return line.strip()[2:].strip()
+    raise ValueError("No H1 title found in markdown file")
+
 def markdown_to_blocks(markdown):
     print("\n=== Starting markdown_to_blocks ===")
     print("Input markdown:")
@@ -126,9 +133,17 @@ def quote_to_html_node(text):
     return ParentNode("blockquote", text_to_children(content))
 
 def list_item_to_html_node(text):
-    # Remove the list marker (* or - or number.) from start
-    content = text.lstrip('*-0123456789. ').strip()
-    return ParentNode("li", text_to_children(content))
+    # Find the end of the list marker
+    marker_end = 0
+    while marker_end < len(text) and (text[marker_end] in '*-0123456789.' or text[marker_end].isspace()):
+        marker_end += 1
+    
+    # Extract the content after the marker
+    content = text[marker_end:].strip()
+    
+    # Process the content for nested markdown
+    children = text_to_children(content)
+    return ParentNode("li", children)
 
 def unordered_list_to_html_node(text):
     items = text.split('\n')
