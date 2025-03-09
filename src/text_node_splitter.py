@@ -28,24 +28,28 @@ def split_nodes_delimiter(old_nodes, delimiter, text_type, strict=True):
             new_nodes.append(node)
             continue
             
-        # Count delimiters to ensure they're balanced
-        if delimiter not in node.text or node.text.count(delimiter) % 2 != 0:
-            if strict:
-                raise ValueError(f"Invalid Markdown syntax: Unmatched delimiter {delimiter}")
+        # Use regex pattern that matches delimiter with optional whitespace
+        pattern = f'{re.escape(delimiter)}([^{re.escape(delimiter)}]+){re.escape(delimiter)}'
+        matches = list(re.finditer(pattern, node.text))
+        
+        if not matches:
             new_nodes.append(node)
             continue
             
-        parts = re.split(f'({re.escape(delimiter)})', node.text)
-        current_type = TextType.NORMAL
+        current_pos = 0
+        for match in matches:
+            # Add text before the match
+            if match.start() > current_pos:
+                new_nodes.append(TextNode(node.text[current_pos:match.start()], TextType.NORMAL))
+            
+            # Add the matched text (without delimiters)
+            content = match.group(1).strip()
+            new_nodes.append(TextNode(content, text_type))
+            
+            current_pos = match.end()
         
-        for i, part in enumerate(parts):
-            if part == delimiter:
-                current_type = text_type if current_type == TextType.NORMAL else TextType.NORMAL
-                continue
-            # Special handling for empty content between delimiters
-            if current_type == text_type and part.strip() == "":
-                new_nodes.append(TextNode("", current_type))
-            else:
-                new_nodes.append(TextNode(part, current_type))
+        # Add any remaining text
+        if current_pos < len(node.text):
+            new_nodes.append(TextNode(node.text[current_pos:], TextType.NORMAL))
                 
     return new_nodes 

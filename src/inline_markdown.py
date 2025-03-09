@@ -76,6 +76,7 @@ def text_to_textnodes(text):
     # Process text styling first
     nodes = split_nodes_delimiter(nodes, "**", TextType.BOLD, strict=False)
     nodes = split_nodes_delimiter(nodes, "*", TextType.ITALIC, strict=False)
+    nodes = split_nodes_delimiter(nodes, "_", TextType.ITALIC, strict=False)
     nodes = split_nodes_delimiter(nodes, "`", TextType.CODE, strict=False)
     
     # Process links and images last

@@ -128,9 +128,30 @@ def code_to_html_node(text):
     return ParentNode("pre", [LeafNode("code", content)])
 
 def quote_to_html_node(text):
-    # Remove > from start of each line
-    content = '\n'.join(line[1:].strip() for line in text.split('\n'))
-    return ParentNode("blockquote", text_to_children(content))
+    # Remove > from start of each line and get lines
+    lines = [line[1:].strip() for line in text.split('\n')]
+    
+    # Group lines into paragraphs
+    paragraphs = []
+    current_paragraph = []
+    
+    for line in lines:
+        if line:  # If line is not empty
+            current_paragraph.append(line)
+        elif current_paragraph:  # If line is empty and we have a paragraph
+            paragraphs.append(' '.join(current_paragraph))
+            current_paragraph = []
+    
+    # Add the last paragraph if it exists
+    if current_paragraph:
+        paragraphs.append(' '.join(current_paragraph))
+    
+    # Create paragraph nodes for each paragraph
+    children = []
+    for paragraph in paragraphs:
+        children.append(ParentNode("p", text_to_children(paragraph)))
+    
+    return ParentNode("blockquote", children)
 
 def list_item_to_html_node(text):
     # Find the end of the list marker
