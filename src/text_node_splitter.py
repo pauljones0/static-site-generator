@@ -28,8 +28,13 @@ def split_nodes_delimiter(old_nodes, delimiter, text_type, strict=True):
             new_nodes.append(node)
             continue
             
-        # Use regex pattern that matches delimiter with optional whitespace
-        pattern = f'{re.escape(delimiter)}([^{re.escape(delimiter)}]+){re.escape(delimiter)}'
+        # Special handling for underscore delimiter to avoid splitting within words
+        if delimiter == '_':
+            pattern = r'(?:^|[^a-zA-Z0-9])_([^_]+)_(?:$|[^a-zA-Z0-9])'
+        else:
+            # Use regex pattern that matches delimiter with optional whitespace
+            pattern = f'{re.escape(delimiter)}([^{re.escape(delimiter)}]+){re.escape(delimiter)}'
+            
         matches = list(re.finditer(pattern, node.text))
         
         if not matches:
